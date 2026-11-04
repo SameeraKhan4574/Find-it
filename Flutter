@@ -1,0 +1,372 @@
+flutter create findit
+cd findit
+
+@'
+import 'package:flutter/material.dart';
+
+void main() => runApp(const FindItApp());
+
+const blue = Color(0xFF2563EB);
+
+class FindItApp extends StatelessWidget {
+  const FindItApp({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return MaterialApp(
+      debugShowCheckedModeBanner: false,
+      title: 'FindIt',
+      theme: ThemeData(
+        colorScheme: ColorScheme.fromSeed(seedColor: blue),
+        useMaterial3: true,
+      ),
+      home: const LoginScreen(),
+    );
+  }
+}
+
+class LoginScreen extends StatefulWidget {
+  const LoginScreen({super.key});
+
+  @override
+  State<LoginScreen> createState() => _LoginScreenState();
+}
+
+class _LoginScreenState extends State<LoginScreen> {
+  final name = TextEditingController();
+  final email = TextEditingController();
+  final password = TextEditingController();
+  bool register = false;
+
+  void enter() {
+    if (email.text.trim().isEmpty || password.text.isEmpty ||
+        (register && name.text.trim().isEmpty)) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Please complete all fields')),
+      );
+      return;
+    }
+    Navigator.pushReplacement(context, MaterialPageRoute(
+      builder: (_) => MainScreen(
+        user: register ? name.text.trim() : email.text.split('@').first,
+      ),
+    ));
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      body: Center(
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.all(26),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              const Icon(Icons.search, size: 80, color: blue),
+              const Text('FindIt', textAlign: TextAlign.center,
+                style: TextStyle(fontSize: 34, fontWeight: FontWeight.bold)),
+              const Text('Campus Lost & Found', textAlign: TextAlign.center),
+              const SizedBox(height: 35),
+              Text(register ? 'Create Account' : 'Welcome Back!',
+                style: const TextStyle(fontSize: 25, fontWeight: FontWeight.bold)),
+              if (register) ...[
+                const SizedBox(height: 18),
+                TextField(controller: name,
+                  decoration: const InputDecoration(labelText: 'Full Name',
+                    prefixIcon: Icon(Icons.person_outline))),
+              ],
+              const SizedBox(height: 18),
+              TextField(controller: email,
+                decoration: const InputDecoration(labelText: 'Email Address',
+                  prefixIcon: Icon(Icons.email_outlined))),
+              const SizedBox(height: 18),
+              TextField(controller: password, obscureText: true,
+                decoration: const InputDecoration(labelText: 'Password',
+                  prefixIcon: Icon(Icons.lock_outline))),
+              const SizedBox(height: 25),
+              FilledButton(onPressed: enter,
+                child: Text(register ? 'Register' : 'Login')),
+              TextButton(
+                onPressed: () => setState(() => register = !register),
+                child: Text(register ? 'Already registered? Login' :
+                  'Create an account')),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class Item {
+  String title, category, location, description, type, reporter;
+  Item(this.title, this.category, this.location, this.description,
+      this.type, this.reporter);
+}
+
+class MainScreen extends StatefulWidget {
+  final String user;
+  const MainScreen({super.key, required this.user});
+
+  @override
+  State<MainScreen> createState() => _MainScreenState();
+}
+
+class _MainScreenState extends State<MainScreen> {
+  int tab = 0;
+  String filter = 'All';
+  final items = <Item>[
+    Item('Black Wallet', 'Accessories', 'College Library',
+      'Black wallet found near the library entrance.',
+      'Found', 'Rahul'),
+    Item('Student ID Card', 'ID Cards', 'Canteen',
+      'Student ID card found on a canteen table.',
+      'Found', 'Priya'),
+    Item('Blue Water Bottle', 'Personal Items', 'Block A',
+      'Blue water bottle with silver cap.',
+      'Lost', 'Arjun'),
+  ];
+
+  void addItem(Item item) => setState(() => items.insert(0, item));
+
+  @override
+  Widget build(BuildContext context) {
+    final screens = [
+      home(),
+      AddReport(user: widget.user, onAdd: addItem),
+      myReports(),
+      profile(),
+    ];
+
+    return Scaffold(
+      body: IndexedStack(index: tab, children: screens),
+      bottomNavigationBar: NavigationBar(
+        selectedIndex: tab,
+        onDestinationSelected: (i) => setState(() => tab = i),
+        destinations: const [
+          NavigationDestination(icon: Icon(Icons.home_outlined),
+            label: 'Home'),
+          NavigationDestination(icon: Icon(Icons.add_circle_outline),
+            label: 'Add Report'),
+          NavigationDestination(icon: Icon(Icons.description_outlined),
+            label: 'My Reports'),
+          NavigationDestination(icon: Icon(Icons.person_outline),
+            label: 'Profile'),
+        ],
+      ),
+    );
+  }
+
+  Widget home() {
+    final visible = items.where((i) =>
+      filter == 'All' || i.type == filter).toList();
+
+    return Scaffold(
+      appBar: AppBar(title: const Text('FindIt',
+        style: TextStyle(fontWeight: FontWeight.bold))),
+      body: ListView(padding: const EdgeInsets.all(18), children: [
+        Text('Hello, ${widget.user}!',
+          style: const TextStyle(fontSize: 25, fontWeight: FontWeight.bold)),
+        const SizedBox(height: 8),
+        const Text('Find your lost belongings on campus.'),
+        const SizedBox(height: 20),
+        Container(
+          padding: const EdgeInsets.all(22),
+          decoration: BoxDecoration(
+            gradient: const LinearGradient(colors: [blue, Color(0xFF60A5FA)]),
+            borderRadius: BorderRadius.circular(18)),
+          child: const Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text('Lost something? Found something?',
+                style: TextStyle(color: Colors.white, fontSize: 19,
+                  fontWeight: FontWeight.bold)),
+              SizedBox(height: 10),
+              Text('Help your campus community reconnect with belongings.',
+                style: TextStyle(color: Colors.white)),
+              Icon(Icons.travel_explore, color: Colors.white, size: 40),
+            ],
+          ),
+        ),
+        const SizedBox(height: 20),
+        Wrap(spacing: 8, children: ['All', 'Lost', 'Found'].map((f) =>
+          ChoiceChip(label: Text(f), selected: filter == f,
+            onSelected: (_) => setState(() => filter = f))).toList()),
+        const SizedBox(height: 15),
+        const Text('Recent Reports',
+          style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
+        const SizedBox(height: 10),
+        if (visible.isEmpty) const Text('No reports available.'),
+        ...visible.map(itemCard),
+      ]),
+    );
+  }
+
+  Widget itemCard(Item item) {
+    return Card(
+      margin: const EdgeInsets.only(bottom: 12),
+      child: ListTile(
+        contentPadding: const EdgeInsets.all(12),
+        leading: const CircleAvatar(
+          backgroundColor: Color(0xFFEFF6FF),
+          child: Icon(Icons.inventory_2_outlined, color: blue)),
+        title: Text(item.title, style: const TextStyle(fontWeight: FontWeight.bold)),
+        subtitle: Text('${item.location}\n${item.category}'),
+        isThreeLine: true,
+        trailing: Text(item.type,
+          style: TextStyle(fontWeight: FontWeight.bold,
+            color: item.type == 'Lost' ? Colors.red : Colors.green)),
+        onTap: () => Navigator.push(context, MaterialPageRoute(
+          builder: (_) => DetailsScreen(item: item))),
+      ),
+    );
+  }
+
+  Widget myReports() {
+    final mine = items.where((i) => i.reporter == widget.user).toList();
+    return Scaffold(
+      appBar: AppBar(title: const Text('My Reports')),
+      body: mine.isEmpty
+        ? const Center(child: Text('You have not submitted any reports yet.'))
+        : ListView(padding: const EdgeInsets.all(15),
+            children: mine.map(itemCard).toList()),
+    );
+  }
+
+  Widget profile() {
+    return Scaffold(
+      appBar: AppBar(title: const Text('My Profile')),
+      body: Center(child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          const CircleAvatar(radius: 45,
+            child: Icon(Icons.person, size: 50)),
+          const SizedBox(height: 15),
+          Text(widget.user, style: const TextStyle(
+            fontSize: 22, fontWeight: FontWeight.bold)),
+          const Text('Campus Member'),
+          const SizedBox(height: 25),
+          OutlinedButton.icon(
+            onPressed: () => Navigator.pushReplacement(context,
+              MaterialPageRoute(builder: (_) => const LoginScreen())),
+            icon: const Icon(Icons.logout), label: const Text('Logout')),
+        ],
+      )),
+    );
+  }
+}
+
+class AddReport extends StatefulWidget {
+  final String user;
+  final Function(Item) onAdd;
+  const AddReport({super.key, required this.user, required this.onAdd});
+
+  @override
+  State<AddReport> createState() => _AddReportState();
+}
+
+class _AddReportState extends State<AddReport> {
+  final title = TextEditingController();
+  final location = TextEditingController();
+  final description = TextEditingController();
+  String category = 'Accessories';
+  String type = 'Lost';
+
+  void submit() {
+    if (title.text.trim().isEmpty || location.text.trim().isEmpty ||
+        description.text.trim().isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Please complete all fields')));
+      return;
+    }
+    widget.onAdd(Item(title.text.trim(), category, location.text.trim(),
+      description.text.trim(), type, widget.user));
+    title.clear();
+    location.clear();
+    description.clear();
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text('Report submitted successfully')));
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(title: const Text('Add Report')),
+      body: ListView(padding: const EdgeInsets.all(20), children: [
+        const Text('Report an Item',
+          style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold)),
+        const SizedBox(height: 20),
+        SegmentedButton<String>(
+          segments: const [
+            ButtonSegment(value: 'Lost', label: Text('Lost')),
+            ButtonSegment(value: 'Found', label: Text('Found')),
+          ],
+          selected: {type},
+          onSelectionChanged: (v) => setState(() => type = v.first)),
+        const SizedBox(height: 18),
+        TextField(controller: title,
+          decoration: const InputDecoration(labelText: 'Item Name')),
+        const SizedBox(height: 15),
+        DropdownButtonFormField<String>(
+          value: category,
+          decoration: const InputDecoration(labelText: 'Category'),
+          items: ['Accessories', 'ID Cards', 'Electronics',
+            'Books', 'Personal Items', 'Other'].map((v) =>
+            DropdownMenuItem(value: v, child: Text(v))).toList(),
+          onChanged: (v) => setState(() => category = v ?? category)),
+        const SizedBox(height: 15),
+        TextField(controller: location,
+          decoration: const InputDecoration(labelText: 'Location')),
+        const SizedBox(height: 15),
+        TextField(controller: description, maxLines: 4,
+          decoration: const InputDecoration(labelText: 'Description')),
+        const SizedBox(height: 25),
+        FilledButton.icon(onPressed: submit,
+          icon: const Icon(Icons.add), label: const Text('Submit Report')),
+      ]),
+    );
+  }
+}
+
+class DetailsScreen extends StatelessWidget {
+  final Item item;
+  const DetailsScreen({super.key, required this.item});
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(title: const Text('Item Details')),
+      body: ListView(padding: const EdgeInsets.all(20), children: [
+        const Icon(Icons.inventory_2_outlined, size: 100, color: blue),
+        const SizedBox(height: 20),
+        Text(item.title, style: const TextStyle(
+          fontSize: 26, fontWeight: FontWeight.bold)),
+        const SizedBox(height: 20),
+        detail('Report Type', item.type),
+        detail('Category', item.category),
+        detail('Location', item.location),
+        detail('Reported by', item.reporter),
+        const SizedBox(height: 20),
+        const Text('Description',
+          style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+        const SizedBox(height: 8),
+        Text(item.description),
+        const SizedBox(height: 25),
+        OutlinedButton.icon(
+          onPressed: () => ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Contact feature coming soon'))),
+          icon: const Icon(Icons.chat_outlined),
+          label: const Text('Contact Reporter')),
+      ]),
+    );
+  }
+
+  Widget detail(String label, String value) => Padding(
+    padding: const EdgeInsets.only(bottom: 15),
+    child: Text('$label: $value',
+      style: const TextStyle(fontSize: 16)));
+}
+'@ | Set-Content -Encoding UTF8 lib\main.dart
+
+flutter pub get
+flutter run
